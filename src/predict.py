@@ -71,8 +71,8 @@ class LanguageDetector:
 
         print("Loading Linear SVM")
 
-        self.model = joblib.load(BASELINE_DIR / "LinearSVM.joblib")
-        self.vectorizer = joblib.load(BASELINE_DIR / "LinearSVM_vectorizer.joblib")
+        self.model = joblib.load(BASELINE_DIR / "LinearSVM_improved.joblib")
+        self.vectorizer = joblib.load(BASELINE_DIR / "LinearSVM_improved_vectorizer.joblib")
 
 
     # ---------- NAIVE BAYES ----------

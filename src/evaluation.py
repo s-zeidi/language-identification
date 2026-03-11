@@ -4,6 +4,7 @@ from tqdm import tqdm
 from pathlib import Path
 import pickle
 import pandas as pd
+import joblib
 
 from sklearn.metrics import accuracy_score, f1_score
 from datasets import load_from_disk
@@ -11,11 +12,37 @@ from datasets import load_from_disk
 from src.model import CharCNN
 
 
-# ==============================
-# CHANGE ONLY THIS
-# ==============================
+# =====================================================
+# SELECT MODEL HERE
+# =====================================================
 
-MODEL_TYPE = "ngram"   # "char"  or  "ngram"
+"""
+AVAILABLE MODELS
+
+# sklearn
+models/baselines/LinearSVM.joblib
+models/baselines/NaiveBayes.joblib
+models/baselines/LinearSVM_improved.joblib
+
+# CNN
+models/charcnn_mps.pkl
+models/charcnn_ngram.pkl
+"""
+
+MODEL_PATH = "models/baselines/LinearSVM_improved.joblib"
+
+
+"""
+AVAILABLE TOKENIZERS
+
+models/tokenizer.pkl
+models/tokenizer_ngram.pkl
+"""
+
+TOKENIZER_PATH = None
+# Example:
+# TOKENIZER_PATH = "models/tokenizer.pkl"
+# TOKENIZER_PATH = "models/tokenizer_ngram.pkl"
 
 
 BATCH_SIZE = 128
@@ -41,49 +68,10 @@ class LanguageDataset(Dataset):
         )
 
 
-def load_model_and_tokenizer(model_dir):
-
-    if MODEL_TYPE == "char":
-
-        model_path = model_dir / "charcnn_mps.pkl"
-        tokenizer_path = model_dir / "tokenizer.pkl"
-        model_name = "CharCNN_char"
-
-    elif MODEL_TYPE == "ngram":
-
-        model_path = model_dir / "charcnn_ngram.pkl"
-        tokenizer_path = model_dir / "tokenizer_ngram.pkl"
-        model_name = "CharCNN_ngram"
-
-    else:
-        raise ValueError("MODEL_TYPE must be 'char' or 'ngram'")
-
-    print("Loading tokenizer:", tokenizer_path.name)
-
-    with open(tokenizer_path, "rb") as f:
-        tokenizer = pickle.load(f)
-
-    # detect vocab automatically
-    if hasattr(tokenizer, "char2id"):
-        vocab_size = len(tokenizer.char2id)
-
-    elif hasattr(tokenizer, "ngram2id"):
-        vocab_size = len(tokenizer.ngram2id)
-
-    else:
-        raise ValueError("Tokenizer format not recognized")
-
-    print("Vocabulary size:", vocab_size)
-
-    return model_path, tokenizer, vocab_size, model_name
-
-
 def save_results(model_name, acc, f1):
 
     PROJECT_ROOT = Path(__file__).resolve().parent.parent
     RESULTS_FILE = PROJECT_ROOT / "results" / "model_results.csv"
-
-    RESULTS_FILE.parent.mkdir(exist_ok=True)
 
     row = pd.DataFrame([{
         "model": model_name,
@@ -99,24 +87,19 @@ def save_results(model_name, acc, f1):
 
 def main():
 
+    PROJECT_ROOT = Path(__file__).resolve().parent.parent
+    DATA_DIR = PROJECT_ROOT / "data"
+
+    model_path = PROJECT_ROOT / MODEL_PATH
+
     device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
 
     print("Device:", device)
-    print("Model type:", MODEL_TYPE)
+    print("Model path:", model_path)
 
-    PROJECT_ROOT = Path(__file__).resolve().parent.parent
-    DATA_DIR = PROJECT_ROOT / "data"
-    MODEL_DIR = PROJECT_ROOT / "models"
-
-    # --------------------------
-    # Load model + tokenizer
-    # --------------------------
-
-    model_path, tokenizer, vocab_size, model_name = load_model_and_tokenizer(MODEL_DIR)
-
-    # --------------------------
+    # ---------------------------
     # Load dataset
-    # --------------------------
+    # ---------------------------
 
     print("\nLoading test dataset")
 
@@ -125,53 +108,100 @@ def main():
     texts = test["sentence"]
     labels = test["label"]
 
-    print("Test samples:", len(texts))
-
-    dataset = LanguageDataset(texts, labels, tokenizer)
-
-    loader = DataLoader(dataset, batch_size=BATCH_SIZE)
-
     num_classes = len(set(labels))
 
-    # --------------------------
-    # Load model
-    # --------------------------
+    print("Test samples:", len(texts))
 
-    print("\nLoading model:", model_path.name)
+    # =====================================================
+    # SKLEARN MODELS
+    # =====================================================
 
-    model = CharCNN(vocab_size, num_classes).to(device)
+    if model_path.suffix == ".joblib":
 
-    with open(model_path, "rb") as f:
-        state_dict = pickle.load(f)
+        print("\nDetected sklearn model")
 
-    model.load_state_dict(state_dict)
+        model = joblib.load(model_path)
 
-    model.eval()
+        vectorizer_path = model_path.parent / f"{model_path.stem}_vectorizer.joblib"
 
-    # --------------------------
-    # Evaluation
-    # --------------------------
+        print("Loading vectorizer:", vectorizer_path)
 
-    print("\nEvaluating\n")
+        vectorizer = joblib.load(vectorizer_path)
 
-    all_preds = []
-    all_labels = []
+        print("Vectorizing test data")
 
-    with torch.no_grad():
+        X_test = vectorizer.transform(texts)
 
-        for x, y in tqdm(loader):
+        preds = model.predict(X_test)
 
-            x = x.to(device)
+        acc = accuracy_score(labels, preds)
+        f1 = f1_score(labels, preds, average="macro")
 
-            outputs = model(x)
+        model_name = model_path.stem
 
-            preds = torch.argmax(outputs, dim=1).cpu().numpy()
+    # =====================================================
+    # CNN MODELS
+    # =====================================================
 
-            all_preds.extend(preds)
-            all_labels.extend(y.numpy())
+    else:
 
-    acc = accuracy_score(all_labels, all_preds)
-    f1 = f1_score(all_labels, all_preds, average="macro")
+        print("\nDetected CNN model")
+
+        tokenizer_path = PROJECT_ROOT / TOKENIZER_PATH
+
+        print("Loading tokenizer:", tokenizer_path)
+
+        with open(tokenizer_path, "rb") as f:
+            tokenizer = pickle.load(f)
+
+        if hasattr(tokenizer, "char2id"):
+            vocab_size = len(tokenizer.char2id)
+
+        elif hasattr(tokenizer, "ngram2id"):
+            vocab_size = len(tokenizer.ngram2id)
+
+        else:
+            raise ValueError("Unknown tokenizer format")
+
+        dataset = LanguageDataset(texts, labels, tokenizer)
+
+        loader = DataLoader(dataset, batch_size=BATCH_SIZE)
+
+        print("Vocabulary size:", vocab_size)
+
+        print("Loading CNN model")
+
+        model = CharCNN(vocab_size, num_classes).to(device)
+
+        with open(model_path, "rb") as f:
+            state_dict = pickle.load(f)
+
+        model.load_state_dict(state_dict)
+
+        model.eval()
+
+        all_preds = []
+        all_labels = []
+
+        print("\nEvaluating\n")
+
+        with torch.no_grad():
+
+            for x, y in tqdm(loader):
+
+                x = x.to(device)
+
+                outputs = model(x)
+
+                preds = torch.argmax(outputs, dim=1).cpu().numpy()
+
+                all_preds.extend(preds)
+                all_labels.extend(y.numpy())
+
+        acc = accuracy_score(all_labels, all_preds)
+        f1 = f1_score(all_labels, all_preds, average="macro")
+
+        model_name = model_path.stem
 
     print("\nAccuracy:", acc)
     print("Macro F1:", f1)
