@@ -12,8 +12,10 @@ downloaded automatically when running the notebook.
 
 # Project Structure
 
-language-identification/ │ 
-├── notebook.ipynb \# Main Jupyter notebook
+language-identification/ 
+│ 
+
+├── language_detection_demo.ipynb \# Main Jupyter notebook
 with all steps\
 ├── report.pdf \# Project report\
 ├── requirements.txt \# Python dependencies\
