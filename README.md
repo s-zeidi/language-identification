@@ -99,21 +99,3 @@ Language: French
 
 ------------------------------------------------------------------------
 
-# Requirements
-
-scikit-learn\
-datasets\
-pandas\
-joblib\
-huggingface_hub\
-tqdm
-
-Install with:
-
-pip install -r requirements.txt
-
-------------------------------------------------------------------------
-
-# Author
-
-Language Identification Project
