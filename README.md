@@ -54,7 +54,7 @@ The notebook will:
 
 The language detection system uses:
 
-Feature extraction: Character n‑grams (1--3 grams) with TF‑IDF.
+Feature extraction: Character n‑grams (1,5 grams) with TF‑IDF.
 
 Classifier: Naive Bayes.
 
@@ -87,7 +87,6 @@ Hello how are you today
 
 Output:
 
-Language Code: en\
 Language: English
 
 Another example:
@@ -96,7 +95,6 @@ Bonjour comment allez vous
 
 Output:
 
-Language Code: fr\
 Language: French
 
 ------------------------------------------------------------------------
