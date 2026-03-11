@@ -1,7 +1,7 @@
 # Language Identification with Naive Bayes
 
 This project implements a **language identification system** using
-**character n-gram features** and a **Multinomial Naive Bayes
+**character n-gram features** and a ** Naive Bayes
 classifier**.
 
 The model predicts the language of a given sentence.\
@@ -12,7 +12,8 @@ downloaded automatically when running the notebook.
 
 # Project Structure
 
-language-identification/ │ ├── notebook.ipynb \# Main Jupyter notebook
+language-identification/ │ 
+├── notebook.ipynb \# Main Jupyter notebook
 with all steps\
 ├── report.pdf \# Project report\
 ├── requirements.txt \# Python dependencies\
@@ -22,10 +23,6 @@ with all steps\
 
 # Installation
 
-Clone the repository:
-
-git clone `<repository-url>`{=html}\
-cd language-identification
 
 Install dependencies:
 
@@ -37,11 +34,8 @@ pip install -r requirements.txt
 
 Open the notebook:
 
-jupyter notebook notebook.ipynb
+language_detection_demo.ipynb
 
-or
-
-jupyter lab notebook.ipynb
 
 Run all notebook cells sequentially.
 
@@ -60,7 +54,7 @@ The language detection system uses:
 
 Feature extraction: Character n‑grams (1--3 grams) with TF‑IDF.
 
-Classifier: Multinomial Naive Bayes.
+Classifier: Naive Bayes.
 
 This approach captures language‑specific character patterns that help
 distinguish between languages.
