@@ -4,7 +4,7 @@ This project implements a **language identification system** using
 **character n-gram features** and a ** Naive Bayes
 classifier**.
 
-The model predicts the language of a given sentence.\
+The model identifies the language of a given sentence.\
 The trained model and vectorizer are stored on **Hugging Face** and
 downloaded automatically when running the notebook.
 
